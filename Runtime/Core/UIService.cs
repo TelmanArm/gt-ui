@@ -12,21 +12,40 @@ namespace Gt.UI
 
         private void Awake()
         {
+            if (_registeredViews == null) return;
+
             foreach (var view in _registeredViews)
+                RegisterView(view);
+        }
+
+        public void RegisterView(UIView view)
+        {
+            if (view == null) return;
+
+            var type = view.GetType();
+
+            if (!_views.TryAdd(type, view))
             {
-                if (view == null) continue;
-
-                var type = view.GetType();
-
-                if (!_views.TryAdd(type, view))
-                {
-                    Debug.LogWarning($"[UIService] Duplicate view type: {type.Name}. Skipping.");
-                    continue;
-                }
-
-                view.OnInitialize();
-                view.Hide();
+                Debug.LogWarning($"[UIService] Duplicate view type: {type.Name}. Skipping.");
+                return;
             }
+
+            view.OnInitialize();
+            view.Hide();
+        }
+
+        public void UnregisterView<T>() where T : UIView
+        {
+            var type = typeof(T);
+
+            if (!_views.TryGetValue(type, out var view))
+            {
+                Debug.LogWarning($"[UIService] Cannot unregister — view not found: {type.Name}");
+                return;
+            }
+
+            view.Hide();
+            _views.Remove(type);
         }
 
         public T Show<T>() where T : UIView

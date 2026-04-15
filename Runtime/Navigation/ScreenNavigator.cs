@@ -6,12 +6,35 @@ namespace Gt.UI
     public class ScreenNavigator : MonoBehaviour, IScreenNavigator
     {
         [SerializeField] private UIService _uiService;
+        [SerializeField] private UIScreenView _initialScreen;
 
+        private IUIService _service;
         private readonly Stack<UIScreenView> _history = new();
+
+        private IUIService Service => _service ?? _uiService;
 
         public UIScreenView CurrentScreen => _history.Count > 0 ? _history.Peek() : null;
         public int StackCount => _history.Count;
         public bool CanGoBack => _history.Count > 1;
+
+        private void Start()
+        {
+            if (_initialScreen != null)
+            {
+                _history.Push(_initialScreen);
+                _initialScreen.Show();
+                _initialScreen.OnNavigatedTo();
+            }
+        }
+
+        /// <summary>
+        /// Sets the UI service via code (for DI projects).
+        /// If not called, falls back to the SerializeField reference.
+        /// </summary>
+        public void SetService(IUIService service)
+        {
+            _service = service;
+        }
 
         public void Push<T>() where T : UIScreenView
         {
@@ -21,7 +44,7 @@ namespace Gt.UI
                 CurrentScreen.Hide();
             }
 
-            var view = _uiService.Get<T>();
+            var view = Service.Get<T>();
             if (view == null)
             {
                 Debug.LogWarning($"[ScreenNavigator] Cannot push — view not found: {typeof(T).Name}");
@@ -59,7 +82,7 @@ namespace Gt.UI
                 old.Hide();
             }
 
-            var view = _uiService.Get<T>();
+            var view = Service.Get<T>();
             if (view == null)
             {
                 Debug.LogWarning($"[ScreenNavigator] Cannot replace — view not found: {typeof(T).Name}");
